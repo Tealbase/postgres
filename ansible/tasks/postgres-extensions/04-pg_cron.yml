@@ -4,6 +4,7 @@
     url: "https://github.com/citusdata/pg_cron/archive/refs/tags/v{{ pg_cron_release }}.tar.gz"
     dest: /tmp/pg_cron-{{ pg_cron_release }}.tar.gz
     checksum: "{{ pg_cron_release_checksum }}"
+    timeout: 60
 
 - name: pg_cron - unpack archive
   unarchive:
@@ -29,3 +30,8 @@
     path: /etc/postgresql/postgresql.conf
     state: present
     line: cron.database_name = 'postgres'
+    
+- name: pg_cron - cleanup
+  file:
+    state: absent
+    path: /tmp/pg_cron-{{ pg_cron_release }}

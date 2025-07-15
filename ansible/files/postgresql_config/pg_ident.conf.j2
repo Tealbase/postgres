@@ -40,5 +40,11 @@
 # ----------------------------------
 
 # MAPNAME       SYSTEM-USERNAME         PG-USERNAME
-# root is allowed to login as postgres
-root_as_postgres  postgres  postgres
+tealbase_map  postgres   postgres
+tealbase_map  root       postgres
+tealbase_map  ubuntu     postgres
+
+# tealbase-specific users
+tealbase_map  gotrue     tealbase_auth_admin
+tealbase_map  postgrest  authenticator
+tealbase_map  adminapi   postgres

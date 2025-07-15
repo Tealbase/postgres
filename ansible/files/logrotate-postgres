@@ -1,9 +1,0 @@
-/var/lib/postgresql/data/pg_log/postgresql.log {
-    size 50M
-    rotate 3  
-    copytruncate
-    delaycompress
-    compress
-    notifempty
-    missingok
-}
