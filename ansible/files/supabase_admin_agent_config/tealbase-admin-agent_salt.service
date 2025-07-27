@@ -1,0 +1,19 @@
+[Unit]
+Description=Configuration management via tealbase-admin-agent salt
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tealbase-admin-agent/tealbase-admin-agent --config /opt/tealbase-admin-agent/config.yaml salt --apply --store-result
+User=tealbase-admin-agent
+Group=tealbase-admin-agent
+StandardOutput=journal
+StandardError=journal
+StateDirectory=tealbase-admin-agent
+CacheDirectory=tealbase-admin-agent
+
+# Security hardening
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

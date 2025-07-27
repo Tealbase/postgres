@@ -1,0 +1,4 @@
+* @tealbase/backend @tealbase/postgres
+migrations/ @tealbase/dev-workflows @tealbase/postgres @tealbase/backend
+docker/orioledb @tealbase/postgres @tealbase/backend
+common.vars.pkr.hcl @tealbase/postgres @tealbase/backend

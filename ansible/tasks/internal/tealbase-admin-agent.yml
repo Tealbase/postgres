@@ -1,0 +1,87 @@
+- name: tealbase-admin-agent - system group
+  group:
+    name: tealbase-admin-agent
+    system: yes
+
+- name: tealbase-admin-agent - system user
+  user:
+    name: tealbase-admin-agent
+    group: tealbase-admin-agent
+    groups: admin,salt
+    append: yes
+    system: yes
+    shell: /bin/sh
+
+- name: tealbase-admin-agent - config dir
+  file:
+    path: /opt/tealbase-admin-agent
+    owner: tealbase-admin-agent
+    state: directory
+
+- name: tealbase-admin-agent - gpg dir
+  file:
+    path: /etc/salt/gpgkeys
+    owner: root
+    group: salt
+    state: directory
+
+- name: give tealbase-admin-agent user permissions
+  copy:
+    src: files/tealbase_admin_agent_config/tealbase-admin-agent.sudoers.conf
+    dest: /etc/sudoers.d/tealbase-admin-agent
+    mode: "0644"
+
+- name: Setting arch (x86)
+  set_fact:
+    arch: "x86"
+  when: platform == "amd64"
+
+- name: Setting arch (arm)
+  set_fact:
+    arch: "arm64"
+  when: platform == "arm64"
+
+- name: Download tealbase-admin-agent archive
+  get_url:
+    url: "https://tealbase-public-artifacts-bucket.s3.amazonaws.com/tealbase-admin-agent/v{{ tealbase_admin_agent_release }}/tealbase-admin-agent-{{ tealbase_admin_agent_release }}-linux-{{ arch }}.tar.gz"
+    dest: "/tmp/tealbase-admin-agent.tar.gz"
+    timeout: 90
+
+- name: tealbase-admin-agent - unpack archive in /opt
+  unarchive:
+    remote_src: yes
+    src: /tmp/tealbase-admin-agent.tar.gz
+    dest: /opt/tealbase-admin-agent/
+    owner: tealbase-admin-agent
+    extra_opts:
+      - --strip-components=1
+
+- name: tealbase-admin-agent - create symlink
+  ansible.builtin.file:
+    path: /opt/tealbase-admin-agent/tealbase-admin-agent
+    src: "/opt/tealbase-admin-agent/tealbase-admin-agent-linux-{{ arch }}"
+    state: link
+    owner: tealbase-admin-agent
+    mode: "0755"
+    force: yes
+
+- name: tealbase-admin-agent - create salt systemd timer file
+  template:
+    src: files/tealbase_admin_agent_config/tealbase-admin-agent_salt.timer.j2
+    dest: /etc/systemd/system/tealbase-admin-agent_salt.timer
+
+- name: tealbase-admin-agent - create salt service file
+  copy:
+    src: files/tealbase_admin_agent_config/tealbase-admin-agent_salt.service
+    dest: /etc/systemd/system/tealbase-admin-agent_salt.service
+
+- name: tealbase-admin-agent - reload systemd
+  systemd:
+    daemon_reload: yes
+
+# Initially ensure tealbase-admin-agent is installed but not started
+- name: tealbase-admin-agent - DISABLE service
+  systemd:
+    name: tealbase-admin-agent_salt
+    enabled: no
+    state: stopped

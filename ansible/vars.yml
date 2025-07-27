@@ -1,42 +1,61 @@
-postgresql_version: 12
-postgresql_wal_level: "logical"
-postgresql_max_wal_senders: 10
-postgresql_max_replication_slots: 5
-postgresql_row_security: on
-postgresql_listen_addresses:
-  - "*"
+tealbase_internal: true
+ebssurrogate_mode: true
+async_mode: true
 
-postgresql_ext_install_contrib: yes
-postgresql_ext_install_dev_headers: yes
+postgres_major:
+  - "15"
+  - "17"
+  - "orioledb-17"
 
-# Warning: Make sure the postgresql & postgis versions are compatible with one another
-postgresql_ext_postgis_version: 3
+# Full version strings for each major version
+postgres_release:
+  postgresorioledb-17: "17.5.1.009-orioledb"
+  postgres17: "17.4.1.066"
+  postgres15: "15.8.1.123"
 
-postgresql_shared_preload_libraries: [pg_stat_statements, pgaudit, plpgsql, plpgsql_check ]
+# Non Postgres Extensions
+pgbouncer_release: "1.19.0"
+pgbouncer_release_checksum: sha256:af0b05e97d0e1fd9ad45fe00ea6d2a934c63075f67f7e2ccef2ca59e3d8ce682
 
-postgresql_pg_hba_custom:
-  - {type: "host", database: "all", user: "all", address: "0.0.0.0/0", method: "md5" }
+# The checksum can be found under "Assets", in the GitHub release page for each version.
+# The binaries used are: ubuntu-aarch64 and linux-static.
+# https://github.com/PostgREST/postgrest/releases
+postgrest_release: "13.0.4"
+postgrest_arm_release_checksum: sha256:2b400200fb15eb5849267e4375fbbc516dd727afadd8786815b48074ed8c03e1
+postgrest_x86_release_checksum: sha256:a0052c8d4726f52349e0298f98da51140ef4941855548590ee88331afa617811
 
-pgtap_release: "1.1.0"
-pgtap_release_checksum: sha1:cca57708e723de18735a723b774577dc52f6f31e
+gotrue_release: 2.177.0
+gotrue_release_checksum: sha1:664a26237618c4bfb1e33e4f03a540c3cef3e3c8
 
-pgaudit_release: "1.4.0"
-pgaudit_release_checksum: sha1:ea085fbf227b5c461331ab33b99579f37db299a6
+aws_cli_release: "2.23.11"
 
-pgsql_http_release: "1.3.1"
-pgsql_http_release_checksum: sha1:816a3fff53e05301b176cf0696799fc5a00f54e8
+salt_minion_version: 3007
 
-plpgsql_check_release: "1.11.0"
-plpgsql_check_release_checksum: sha1:395313b6ef9c10c4fc182817d6f0040b171147b8
+golang_version: "1.22.11"
+golang_version_checksum:
+  arm64: sha256:0fc88d966d33896384fbde56e9a8d80a305dc17a9f48f1832e061724b1719991
+  amd64: sha256:9ebfcab26801fa4cf0627c6439db7a4da4d3c6766142a3dd83508240e4f21031
 
-pljava_release: "1_5_5"
-pljava_release_checksum: sha1:5277433030fdeed8528c7c0154163b54aedbd842
+envoy_release: 1.28.0
+envoy_release_checksum: sha1:b0a06e9cfb170f1993f369beaa5aa9d7ec679ce5
+envoy_hot_restarter_release_checksum: sha1:6d43b89d266fb2427a4b51756b649883b0617eda
 
-postgresql_log_destination: "csvlog"
-postgresql_logging_collector: on
-postgresql_log_filename: "postgresql.log"
-postgresql_log_rotation_age: 0
-postgresql_log_rotation_size: 0
+kong_release_target: focal
+kong_deb: kong_2.8.1_arm64.deb
+kong_deb_checksum: sha1:2086f6ccf8454fe64435252fea4d29d736d7ec61
 
-wal_g_release: "0.2.15"
-wal_g_release_checksum: sha1:e82d405121e0ccc322a323b9824e60c102b14004
+nginx_release: 1.22.0
+nginx_release_checksum: sha1:419efb77b80f165666e2ee406ad8ae9b845aba93
+
+postgres_exporter_release: "0.15.0"
+postgres_exporter_release_checksum:
+  arm64: sha256:29ba62d538b92d39952afe12ee2e1f4401250d678ff4b354ff2752f4321c87a0
+  amd64: sha256:cb89fc5bf4485fb554e0d640d9684fae143a4b2d5fa443009bd29c59f9129e84
+
+adminapi_release: 0.84.1
+adminmgr_release: 0.25.1
+tealbase_admin_agent_release: 1.4.37
+tealbase_admin_agent_splay: 30
+
+vector_x86_deb: "https://packages.timber.io/vector/0.48.X/vector_0.48.0-1_amd64.deb"
+vector_arm_deb: "https://packages.timber.io/vector/0.48.X/vector_0.48.0-1_arm64.deb"
