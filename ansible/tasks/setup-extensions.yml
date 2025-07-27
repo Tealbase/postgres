@@ -39,6 +39,8 @@
 
 - name: Install pljava
   import_tasks: tasks/postgres-extensions/12-pljava.yml
+  tags:
+    - legacy-incompatible
 
 - name: Install pg_plan_filter
   import_tasks: tasks/postgres-extensions/14-pg_plan_filter.yml
@@ -57,15 +59,14 @@
 
 - name: Install pg_graphql
   import_tasks: tasks/postgres-extensions/19-pg_graphql.yml
+  tags:
+    - legacy-incompatible
 
 - name: Install pg_stat_monitor
   import_tasks: tasks/postgres-extensions/20-pg_stat_monitor.yml
 
-- name: Install auto_explain
-  import_tasks: tasks/postgres-extensions/21-auto_explain.yml
-
-# - name: Install vault
-#   import_tasks: tasks/postgres-extensions/23-vault.yml
+- name: Install vault
+  import_tasks: tasks/postgres-extensions/23-vault.yml
 
 - name: Install PGroonga
   import_tasks: tasks/postgres-extensions/24-pgroonga.yml
@@ -75,12 +76,15 @@
 
 - name: Install hypopg
   import_tasks: tasks/postgres-extensions/26-hypopg.yml
-  
-- name: Install pg_repack
-  import_tasks: tasks/postgres-extensions/27-pg_repack.yml
 
+ - name: Install pg_repack
+  import_tasks: tasks/postgres-extensions/27-pg_repack.yml
+  
 - name: Install pgvector
   import_tasks: tasks/postgres-extensions/28-pgvector.yml
+
+- name: Install Trusted Language Extensions
+  import_tasks: tasks/postgres-extensions/29-pg_tle.yml
 
 - name: Verify async task status
   import_tasks: tasks/postgres-extensions/99-finish_async_tasks.yml

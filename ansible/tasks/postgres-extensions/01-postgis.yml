@@ -30,7 +30,7 @@
 
 - name: postgis - download SFCGAL dependency
   get_url:
-    url: "https://gitlab.com/Oslandia/SFCGAL/-/archive/v{{ sfcgal_release }}/SFCGAL-v{{ sfcgal_release }}.tar.gz"
+    url: "https://tealbase-public-artifacts-bucket.s3.amazonaws.com/sfcgal/SFCGAL-v{{ sfcgal_release }}.tar.gz"
     dest: /tmp/SFCGAL-v{{ sfcgal_release }}.tar.gz
     checksum: "{{ sfcgal_release_checksum }}"
     timeout: 60
@@ -49,7 +49,8 @@
   become: yes
 
 - name: postgis - build SFCGAL
-  make:
+  community.general.make:
+    target: all
     chdir: /tmp/SFCGAL-v{{ sfcgal_release }}
     jobs: "{{ parallel_jobs | default(omit) }}"
   become: yes
@@ -78,7 +79,8 @@
   become: yes
 
 - name: postgis - build
-  make:
+  community.general.make:
+    target: all
     chdir: /tmp/postgis-{{ postgis_release }}
     jobs: "{{ parallel_jobs | default(omit) }}"
   become: yes

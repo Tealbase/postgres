@@ -300,7 +300,7 @@ max_wal_senders = 10		# max number of walsender processes
 max_replication_slots = 5	# max number of replication slots
 				# (change requires restart)
 #wal_keep_size = 0		# in megabytes; 0 disables
-max_slot_wal_keep_size = 1024   # in megabytes; -1 disables
+max_slot_wal_keep_size = 4096   # in megabytes; -1 disables
 #wal_sender_timeout = 60s	# in milliseconds; 0 disables
 #track_commit_timestamp = off	# collect timestamp of transaction commit
 				# (change requires restart)
@@ -688,7 +688,7 @@ default_text_search_config = 'pg_catalog.english'
 #local_preload_libraries = ''
 #session_preload_libraries = ''
 
-shared_preload_libraries = 'pg_stat_statements, pg_stat_monitor, pgaudit, plpgsql, plpgsql_check, pg_cron, pg_net, pgsodium, timescaledb, auto_explain'	# (change requires restart)
+shared_preload_libraries = 'pg_stat_statements, pgaudit, plpgsql, plpgsql_check, pg_cron, pg_net, pgsodium, timescaledb, auto_explain, pg_tle, plan_filter'	# (change requires restart)
 jit_provider = 'llvmjit'		# JIT library to use
 
 # - Other Defaults -
@@ -763,6 +763,9 @@ jit_provider = 'llvmjit'		# JIT library to use
 # WAL-G specific configurations
 #include = '/etc/postgresql-custom/wal-g.conf'
 
+# read replica specific configurations
+include = '/etc/postgresql-custom/read-replica.conf'
+
 # supautils specific configurations
 #include = '/etc/postgresql-custom/supautils.conf'
 
@@ -771,3 +774,5 @@ jit_provider = 'llvmjit'		# JIT library to use
 #------------------------------------------------------------------------------
 
 # Add settings for extensions here
+auto_explain.log_min_duration = 10s
+cron.database_name = 'postgres'

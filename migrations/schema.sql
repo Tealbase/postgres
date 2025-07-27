@@ -80,6 +80,13 @@ CREATE SCHEMA storage;
 
 
 --
+-- Name: vault; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA vault;
+
+
+--
 -- Name: pg_graphql; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -136,6 +143,20 @@ COMMENT ON EXTENSION pgjwt IS 'JSON Web Token API for Postgresql';
 
 
 --
+-- Name: tealbase_vault; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS tealbase_vault WITH SCHEMA vault;
+
+
+--
+-- Name: EXTENSION tealbase_vault; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION tealbase_vault IS 'tealbase Vault Extension';
+
+
+--
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -189,17 +210,14 @@ $$;
 CREATE FUNCTION extensions.grant_pg_cron_access() RETURNS event_trigger
     LANGUAGE plpgsql
     AS $$
-DECLARE
-  schema_is_cron bool;
 BEGIN
-  schema_is_cron = (
-    SELECT n.nspname = 'cron'
+  IF EXISTS (
+    SELECT
     FROM pg_event_trigger_ddl_commands() AS ev
-    LEFT JOIN pg_catalog.pg_namespace AS n
-      ON ev.objid = n.oid
-  );
-
-  IF schema_is_cron
+    JOIN pg_extension AS ext
+    ON ev.objid = ext.oid
+    WHERE ext.extname = 'pg_cron'
+  )
   THEN
     grant usage on schema cron to postgres with grant option;
 
@@ -215,9 +233,9 @@ BEGIN
         on functions to postgres with grant option;
 
     grant all privileges on all tables in schema cron to postgres with grant option;
-
+    revoke all on table cron.job from postgres;
+    grant select on table cron.job to postgres with grant option;
   END IF;
-
 END;
 $$;
 
@@ -277,6 +295,10 @@ BEGIN
         alter default privileges in schema graphql grant all on tables to postgres, anon, authenticated, service_role;
         alter default privileges in schema graphql grant all on functions to postgres, anon, authenticated, service_role;
         alter default privileges in schema graphql grant all on sequences to postgres, anon, authenticated, service_role;
+
+        -- Allow postgres role to allow granting usage on graphql and graphql_public schemas to custom roles
+        grant usage on schema graphql_public to postgres with grant option;
+        grant usage on schema graphql to postgres with grant option;
     END IF;
 
 END;
@@ -552,6 +574,28 @@ END
 $$;
 
 
+--
+-- Name: secrets_encrypt_secret_secret(); Type: FUNCTION; Schema: vault; Owner: -
+--
+
+CREATE FUNCTION vault.secrets_encrypt_secret_secret() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		BEGIN
+		        new.secret = CASE WHEN new.secret IS NULL THEN NULL ELSE
+			CASE WHEN new.key_id IS NULL THEN NULL ELSE pg_catalog.encode(
+			  pgsodium.crypto_aead_det_encrypt(
+				pg_catalog.convert_to(new.secret, 'utf8'),
+				pg_catalog.convert_to((new.id::text || new.description::text || new.created_at::text || new.updated_at::text)::text, 'utf8'),
+				new.key_id::uuid,
+				new.nonce
+			  ),
+				'base64') END END;
+		RETURN new;
+		END;
+		$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -736,6 +780,30 @@ CREATE TABLE storage.objects (
     last_accessed_at timestamp with time zone DEFAULT now(),
     metadata jsonb
 );
+
+
+--
+-- Name: decrypted_secrets; Type: VIEW; Schema: vault; Owner: -
+--
+
+CREATE VIEW vault.decrypted_secrets AS
+ SELECT secrets.id,
+    secrets.name,
+    secrets.description,
+    secrets.secret,
+        CASE
+            WHEN (secrets.secret IS NULL) THEN NULL::text
+            ELSE
+            CASE
+                WHEN (secrets.key_id IS NULL) THEN NULL::text
+                ELSE convert_from(pgsodium.crypto_aead_det_decrypt(decode(secrets.secret, 'base64'::text), convert_to(((((secrets.id)::text || secrets.description) || (secrets.created_at)::text) || (secrets.updated_at)::text), 'utf8'::name), secrets.key_id, secrets.nonce), 'utf8'::name)
+            END
+        END AS decrypted_secret,
+    secrets.key_id,
+    secrets.nonce,
+    secrets.created_at,
+    secrets.updated_at
+   FROM vault.secrets;
 
 
 --
@@ -947,7 +1015,7 @@ CREATE EVENT TRIGGER issue_graphql_placeholder ON sql_drop
 --
 
 CREATE EVENT TRIGGER issue_pg_cron_access ON ddl_command_end
-         WHEN TAG IN ('CREATE SCHEMA')
+         WHEN TAG IN ('CREATE EXTENSION')
    EXECUTE FUNCTION extensions.grant_pg_cron_access();
 
 

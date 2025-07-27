@@ -20,7 +20,7 @@ variable "ami_regions" {
 
 variable "ansible_arguments" {
   type    = string
-  default = "--skip-tags,install-postgrest,--skip-tags,install-pgbouncer,--skip-tags,install-tealbase-internal,ebssurrogate_mode='true'"
+  default = "--skip-tags install-postgrest,install-pgbouncer,install-tealbase-internal"
 }
 
 variable "aws_access_key" {
@@ -87,6 +87,20 @@ variable "packer-execution-id" {
   default = "unknown"
 }
 
+variable "force-deregister" {
+  type    = bool
+  default = false
+}
+
+packer {
+  required_plugins {
+    amazon = {
+      source  = "github.com/hashicorp/amazon"
+      version = "~> 1"
+    }
+  }
+}
+
 # source block
 source "amazon-ebssurrogate" "source" {
   profile = "${var.profile}"
@@ -99,6 +113,7 @@ source "amazon-ebssurrogate" "source" {
   instance_type = "c6g.4xlarge"
   region       = "${var.region}"
   #secret_key   = "${var.aws_secret_key}"
+  force_deregister = var.force-deregister
 
   # Use latest official ubuntu focal ami owned by Canonical.
   source_ami_filter {
@@ -165,6 +180,8 @@ source "amazon-ebssurrogate" "source" {
     volume_size = 10
     volume_type = "gp2"
   }
+
+  associate_public_ip_address = true
 }
 
 # a build block invokes sources and runs provisioning steps on them.
@@ -237,10 +254,12 @@ build {
       "DOCKER_USER=${var.docker_user}",
       "DOCKER_PASSWD=${var.docker_passwd}",
       "DOCKER_IMAGE=${var.docker_image}",
-      "DOCKER_IMAGE_TAG=${var.docker_image_tag}"
+      "DOCKER_IMAGE_TAG=${var.docker_image_tag}",
+      "POSTGRES_tealbase_VERSION=${var.postgres-version}"
     ]
+    use_env_var_file = true
     script = "ebssurrogate/scripts/surrogate-bootstrap.sh"
-    execute_command = "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    execute_command = "sudo -S sh -c '. {{.EnvVarFile}} && {{.Path}}'"
     start_retry_timeout = "5m"
     skip_clean = true
   }
@@ -248,6 +267,12 @@ build {
   provisioner "file" {
     source = "/tmp/ansible.log"
     destination = "/tmp/ansible.log"
+    direction = "download"
+  }
+
+  provisioner "file" {
+    source = "/tmp/pg_binaries.tar.gz"
+    destination = "/tmp/pg_binaries.tar.gz"
     direction = "download"
   }
 }

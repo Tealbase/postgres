@@ -1,7 +1,7 @@
 - name: adminapi - system user
   user:
     name: adminapi
-    groups: root,admin,kong,pgbouncer,postgres,postgrest,systemd-journal,wal-g
+    groups: root,admin,envoy,kong,pgbouncer,postgres,postgrest,systemd-journal,vector,wal-g
     append: yes
 
 - name: Move shell scripts to /root dir
@@ -13,17 +13,13 @@
   loop:
     - { file: "grow_fs.sh" }
     - { file: "manage_readonly_mode.sh" }
-    - { file: "pg_upgrade_check.sh" }
-    - { file: "pg_upgrade_complete.sh" }
-    - { file: "pg_upgrade_initiate.sh" }
-    - { file: "pg_upgrade_prepare.sh" }
-    - { file: "pg_upgrade_pgsodium_getkey.sh" }
     - { file: "pg_egress_collect.pl" }
 
 - name: give adminapi user permissions
   copy:
     src: files/adminapi.sudoers.conf
     dest: /etc/sudoers.d/adminapi
+    mode: "0644"
 
 - name: perms for adminapi
   shell: |
@@ -58,10 +54,35 @@
     owner: adminapi
     state: directory
 
+- name: adminapi - pg_upgrade scripts dir
+  file:
+    path: /etc/adminapi/pg_upgrade_scripts
+    owner: adminapi
+    state: directory
+
+- name: Move shell scripts to /etc/adminapi/pg_upgrade_scripts/
+  copy:
+    src: "files/admin_api_scripts/pg_upgrade_scripts/{{ item.file }}"
+    dest: "/etc/adminapi/pg_upgrade_scripts/{{ item.file }}"
+    mode: "0755"
+    owner: adminapi
+  loop:
+    - { file: "check.sh" }
+    - { file: "complete.sh" }
+    - { file: "initiate.sh" }
+    - { file: "prepare.sh" }
+    - { file: "pgsodium_getkey.sh" }
+    - { file: "common.sh" }
+
 - name: adminapi - create service file
   template:
     src: files/adminapi.service.j2
     dest: /etc/systemd/system/adminapi.service
+
+- name: adminapi - create service file for commence backup process
+  template:
+     src: files/commence-backup.service.j2
+     dest: /etc/systemd/system/commence-backup.service
 
 - name: UFW - Allow connections to adminapi ports
   ufw:

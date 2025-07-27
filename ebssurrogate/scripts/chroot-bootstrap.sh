@@ -24,6 +24,8 @@ fi
 
 
 function update_install_packages {
+	source /etc/os-release
+
 	# Update APT with new sources
 	cat /etc/apt/sources.list
 	apt-get $APT_OPTIONS update && apt-get $APT_OPTIONS --yes dist-upgrade
@@ -43,6 +45,7 @@ function update_install_packages {
 	# Install standard packages
 	apt-get install -y \
 		sudo \
+		wget \
 		cloud-init \
 		acpid \
 		ec2-hibinit-agent \
@@ -75,6 +78,10 @@ function update_install_packages {
 }
 
 function setup_locale {
+cat << EOF >> /etc/locale.gen
+en_US.UTF-8 UTF-8
+EOF
+
 cat << EOF > /etc/default/locale
 LANG="C.UTF-8"
 LC_CTYPE="C.UTF-8"
@@ -82,17 +89,11 @@ EOF
 	localedef -i en_US -f UTF-8 en_US.UTF-8
 }
 
-# Disable IPV6 for ufw
-function disable_ufw_ipv6 {
-	sed -i 's/IPV6=yes/IPV6=no/g' /etc/default/ufw
-}
-
 function install_packages_for_build {
 	apt-get install -y --no-install-recommends linux-libc-dev \
 	 acl \
 	 magic-wormhole sysstat \
 	 build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libsystemd-dev libpq-dev libxml2-utils uuid-dev xsltproc ssl-cert \
-	 llvm-11-dev clang-11 \
 	 gcc-10 g++-10 \
 	 libgeos-dev libproj-dev libgdal-dev libjson-c-dev libboost-all-dev libcgal-dev libmpfr-dev libgmp-dev cmake \
 	 libkrb5-dev \
@@ -100,6 +101,9 @@ function install_packages_for_build {
 	 curl gpp apt-transport-https cmake libc++-dev libc++abi-dev libc++1 libglib2.0-dev libtinfo5 libc++abi1 ninja-build python \
 	 liblzo2-dev
 
+	source /etc/os-release
+
+	apt-get install -y --no-install-recommends llvm-11-dev clang-11
 	# Mark llvm as manual to prevent auto removal
 	apt-mark manual libllvm11:arm64
 }
@@ -117,26 +121,14 @@ GRUB_DEFAULT=0
 GRUB_TIMEOUT=0
 GRUB_TIMEOUT_STYLE="hidden"
 GRUB_DISTRIBUTOR="tealbase postgresql"
-GRUB_CMDLINE_LINUX_DEFAULT="nomodeset console=tty1 console=ttyS0 ipv6.disable=1"
-EOF
-}
-
-function setup_grub_conf_amd64 {
-	mkdir -p /etc/default/grub.d
-
-cat << EOF > /etc/default/grub.d/50-aws-settings.cfg
-GRUB_RECORDFAIL_TIMEOUT=0
-GRUB_TIMEOUT=0
-GRUB_CMDLINE_LINUX_DEFAULT=" root=/dev/nvme0n1p2 rootfstype=ext4 rw noatime,nodiratime,discard console=tty1 console=ttyS0 ip=dhcp tsc=reliable net.ifnames=0 quiet module_blacklist=psmouse,input_leds,autofs4 ipv6.disable=1 nvme_core.io_timeout=4294967295 systemd.hostname=ubuntu ipv6.disable=1"
-GRUB_TERMINAL=console
-GRUB_DISABLE_LINUX_UUID=true
+GRUB_CMDLINE_LINUX_DEFAULT="nomodeset console=tty1 console=ttyS0 ipv6.disable=0"
 EOF
 }
 
 # Install GRUB
 function install_configure_grub {
 	if [ "${ARCH}" = "arm64" ]; then
-		apt-get $APT_OPTIONS --yes install cloud-guest-utils fdisk grub-efi-arm64
+		apt-get $APT_OPTIONS --yes install cloud-guest-utils fdisk grub-efi-arm64 efibootmgr
 		setup_grub_conf_arm64
 		rm -rf /etc/grub.d/30_os-prober
 		sleep 1
@@ -199,15 +191,14 @@ function cleanup_cache {
 
 update_install_packages
 setup_locale
-install_packages_for_build
+#install_packages_for_build
 install_configure_grub
 setup_apparmor
 setup_hostname
 create_admin_account
 set_default_target
 setup_eth0_interface
-disable_ufw_ipv6
 disable_sshd_passwd_auth
 disable_fsck
-setup_ccache
+#setup_ccache
 cleanup_cache

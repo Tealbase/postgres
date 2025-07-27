@@ -1,4 +1,5 @@
 BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgtap;
 SELECT plan(8);
 
 -- Check installed extensions
@@ -11,7 +12,8 @@ SELECT extensions_are(
     'pg_graphql',
     'pgcrypto',
     'pgjwt',
-    'uuid-ossp'
+    'uuid-ossp',
+    'tealbase_vault'
      ]
 );
 
