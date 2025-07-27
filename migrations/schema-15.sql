@@ -125,7 +125,7 @@ CREATE EXTENSION IF NOT EXISTS tealbase_vault WITH SCHEMA vault;
 -- Name: EXTENSION tealbase_vault; Type: COMMENT; Schema: -; Owner: -
 --
 
-COMMENT ON EXTENSION tealbase_vault IS 'tealbase Vault Extension';
+COMMENT ON EXTENSION tealbase_vault IS 'Tealbase Vault Extension';
 
 
 --

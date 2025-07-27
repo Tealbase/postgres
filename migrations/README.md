@@ -66,7 +66,7 @@ Additionally, [tealbase/postgres](https://github.com/tealbase/postgres/blob/deve
 - Migrations are append only. Never edit existing migrations once they are on master.
 - Migrations in `migrations/db/migrations` have to be idempotent.
 - Self contained components (gotrue, storage, realtime) may contain their own migrations.
-- Self hosted tealbase users should update role passwords separately after running all migrations.
+- Self hosted Tealbase users should update role passwords separately after running all migrations.
 - Prod release is done by publishing a new GitHub release on master branch.
 
 ## Requirements
