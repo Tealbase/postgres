@@ -125,7 +125,7 @@ build {
   provisioner "shell" {
     environment_vars = [
       "POSTGRES_MAJOR_VERSION=${var.postgres-major-version}",
-      "POSTGRES_tealbase_VERSION=${var.postgres-version}",
+      "POSTGRES_TEALBASE_VERSION=${var.postgres-version}",
       "GIT_SHA=${var.git_sha}"
     ]
     use_env_var_file = true

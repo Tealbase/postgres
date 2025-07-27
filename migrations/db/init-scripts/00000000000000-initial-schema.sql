@@ -4,13 +4,13 @@
 -- defaults to empty publication
 create publication tealbase_realtime;
 
--- tealbase super admin
+-- Tealbase super admin
 alter user  tealbase_admin with superuser createdb createrole replication bypassrls;
 
--- tealbase replication user
+-- Tealbase replication user
 create user tealbase_replication_admin with login replication;
 
--- tealbase read-only user
+-- Tealbase read-only user
 create role tealbase_read_only_user with login bypassrls;
 grant pg_read_all_data to tealbase_read_only_user;
 

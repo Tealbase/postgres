@@ -191,7 +191,7 @@ def check_postgresql_mount():
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="tealbase Postgres Artifact Permissions Checker",
+        prog="Tealbase Postgres Artifact Permissions Checker",
         description="Checks the Postgres Artifact for the appropriate users and group memberships",
     )
     parser.add_argument(

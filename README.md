@@ -129,18 +129,18 @@ See all installation instructions in the [repo wiki](https://github.com/tealbase
 TODO: find way to automate this
 |   | Postgres & Extensions | PgBouncer | PostgREST | WAL-G |
 |---|:---:|:---:|:---:|:---:|
-| tealbase Postgres |  ✔️   | ❌    | ❌   |  ✔️   |
-| tealbase Postgres: PgBouncer Bundle  |  ✔️   |  ✔️  | ❌    |   ✔️ |
-| tealbase Postgres: PostgREST Bundle |  ✔️   |  ❌  |  ✔️   |   ✔️ |
-| tealbase Postgres: Complete Bundle |  ✔️  |  ✔️   | ✔️   | ✔️   |
+| Tealbase Postgres |  ✔️   | ❌    | ❌   |  ✔️   |
+| Tealbase Postgres: PgBouncer Bundle  |  ✔️   |  ✔️  | ❌    |   ✔️ |
+| Tealbase Postgres: PostgREST Bundle |  ✔️   |  ❌  |  ✔️   |   ✔️ |
+| Tealbase Postgres: Complete Bundle |  ✔️  |  ✔️   | ✔️   | ✔️   |
 
 #### Availability
 |   | AWS ARM | AWS x86 | Digital Ocean x86 |
 |---|:---:|:---:|:---:|
-| tealbase Postgres | Coming Soon | Coming Soon | Coming Soon |
-| tealbase Postgres: PgBouncer Bundle  | Coming Soon | Coming Soon | Coming Soon |
-| tealbase Postgres: PostgREST Bundle | Coming Soon | Coming Soon | Coming Soon |
-| tealbase Postgres: Complete Bundle | Coming Soon | Coming Soon | Coming Soon |
+| Tealbase Postgres | Coming Soon | Coming Soon | Coming Soon |
+| Tealbase Postgres: PgBouncer Bundle  | Coming Soon | Coming Soon | Coming Soon |
+| Tealbase Postgres: PostgREST Bundle | Coming Soon | Coming Soon | Coming Soon |
+| Tealbase Postgres: Complete Bundle | Coming Soon | Coming Soon | Coming Soon |
 
 ``` -->
 
@@ -148,7 +148,7 @@ TODO: find way to automate this
 
 - Make it fast and simple to get started with Postgres.
 - Show off a few of Postgres' most exciting features.
-- This is the same build we offer at [tealbase](https://tealbase.io).
+- This is the same build we offer at [Tealbase](https://tealbase.io).
 - Open a github issue if you have a feature request
 
 ## License

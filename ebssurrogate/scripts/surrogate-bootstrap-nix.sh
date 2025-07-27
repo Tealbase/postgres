@@ -184,7 +184,7 @@ function setup_chroot_environment {
 	cp /tmp/chroot-bootstrap-nix.sh /mnt/tmp/chroot-bootstrap-nix.sh
 	chroot /mnt /tmp/chroot-bootstrap-nix.sh
 	rm -f /mnt/tmp/chroot-bootstrap-nix.sh
-	echo "${POSTGRES_tealbase_VERSION}" > /mnt/root/tealbase-release
+	echo "${POSTGRES_TEALBASE_VERSION}" > /mnt/root/tealbase-release
 
 	# Copy the nvme identification script into /sbin inside the chroot
 	mkdir -p /mnt/sbin

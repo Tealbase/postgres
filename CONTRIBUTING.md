@@ -1,4 +1,4 @@
-# Welcome to tealbase Postgres contributing guide
+# Welcome to Tealbase Postgres contributing guide
 
 ## Adding a new extension
 

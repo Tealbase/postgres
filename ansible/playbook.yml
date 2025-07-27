@@ -72,7 +72,7 @@
         - install-tealbase-internal
       when: debpkg_mode or nixpkg_mode
 
-    - name: Install tealbase specific content
+    - name: Install Tealbase specific content
       import_tasks: tasks/setup-tealbase-internal.yml
       tags:
         - install-tealbase-internal

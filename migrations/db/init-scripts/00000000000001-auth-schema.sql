@@ -108,7 +108,7 @@ $$ language sql stable;
 -- usage on auth functions to API roles
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 
--- tealbase super admin
+-- Tealbase super admin
 CREATE USER tealbase_auth_admin NOINHERIT CREATEROLE LOGIN NOREPLICATION;
 GRANT ALL PRIVILEGES ON SCHEMA auth TO tealbase_auth_admin;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth TO tealbase_auth_admin;

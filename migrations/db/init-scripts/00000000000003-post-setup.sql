@@ -100,7 +100,7 @@ BEGIN
 END
 $$;
 
--- tealbase dashboard user
+-- Tealbase dashboard user
 CREATE ROLE dashboard_user NOSUPERUSER CREATEDB CREATEROLE REPLICATION;
 GRANT ALL ON DATABASE postgres TO dashboard_user;
 GRANT ALL ON SCHEMA auth TO dashboard_user;

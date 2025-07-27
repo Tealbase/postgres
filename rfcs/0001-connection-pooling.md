@@ -9,7 +9,7 @@ related-issues: (will contain links to implementation PRs)
 # Summary
 [summary]: #summary
 
-We would like to explore connection pooling on tealbase. This RFC is intended to decide:
+We would like to explore connection pooling on Tealbase. This RFC is intended to decide:
 
 - Whether we should provide a pooler
 - Which connection pooler we should use
@@ -55,7 +55,7 @@ Should a user be able to change the configuration? If so, how would they do it?
 # Alternatives
 [alternatives]: #alternatives
 
-1. Since we already offer [PostgREST](https://github.com/postgrest/postgrest) and [postgres-meta](https://github.com/tealbase/pg-api), this isn't entirely necessary for the tealbase stack. Bundling this is only beneficial for connecting external tools. 
+1. Since we already offer [PostgREST](https://github.com/postgrest/postgrest) and [postgres-meta](https://github.com/tealbase/pg-api), this isn't entirely necessary for the Tealbase stack. Bundling this is only beneficial for connecting external tools. 
 2. We could hold back on this implementation until we move to a full Postgres Operator, which would include a pooler. It would be nice to have something for local development though.
 
 
