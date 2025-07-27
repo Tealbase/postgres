@@ -23,7 +23,7 @@
 
 - name: Postgres - install server
   apt:
-    name: postgresql-{{ postgresql_major }}={{ postgresql_release }}-1.pgdg20.04+1
+    name: postgresql-{{ postgresql_major }}={{ postgresql_release }}-1.pgdg24.04+1
     install_recommends: no
   when: debpkg_mode
 
@@ -204,23 +204,58 @@
     ansible_command_timeout: 60
   when: debpkg_mode
 
-- name: Initialize the database stage2_nix
-  become: yes
-  become_user: postgres
-  shell: source /var/lib/postgresql/.bashrc && /usr/lib/postgresql/bin/pg_ctl -D /var/lib/postgresql/data initdb -o "--allow-group-access" -o "--username=tealbase_admin"
-  args:
-    executable: /bin/bash
-  environment:
-    LANG: en_US.UTF-8
-    LANGUAGE: en_US.UTF-8
-    LC_ALL: en_US.UTF-8
-    LC_CTYPE: en_US.UTF-8
-    LOCALE_ARCHIVE: /usr/lib/locale/locale-archive
-  vars:
-    ansible_command_timeout: 60
-    # Circumvents the following error:
-    # "Timeout (12s) waiting for privilege escalation prompt"
-  when: stage2_nix 
+- name: Make sure .bashrc exists
+  file:
+    path: /var/lib/postgresql/.bashrc
+    state: touch
+    owner: postgres
+    group: postgres
+  when: nixpkg_mode
+
+- name: Check psql_version and modify supautils.conf and postgresql.conf if necessary
+  block:
+    - name: Check if psql_version is psql_orioledb
+      set_fact:
+        is_psql_oriole: "{{ psql_version in ['psql_orioledb-17'] }}"
+        is_psql_17: "{{ psql_version in ['psql_17'] }}"
+
+    - name: Initialize the database stage2_nix (non-orioledb)
+      become: yes
+      become_user: postgres
+      shell: source /var/lib/postgresql/.bashrc && /usr/lib/postgresql/bin/pg_ctl -D /var/lib/postgresql/data initdb -o "--allow-group-access" -o "--username=tealbase_admin"
+      args:
+        executable: /bin/bash
+      environment:
+        LANG: en_US.UTF-8
+        LANGUAGE: en_US.UTF-8
+        LC_ALL: en_US.UTF-8
+        LC_CTYPE: en_US.UTF-8
+        LOCALE_ARCHIVE: /usr/lib/locale/locale-archive
+      vars:
+        ansible_command_timeout: 60
+      when: stage2_nix and not is_psql_oriole and not is_psql_17
+
+    - name: Initialize the database stage2_nix (orioledb)
+      become: yes
+      become_user: postgres
+      shell: >
+        source /var/lib/postgresql/.bashrc && /usr/lib/postgresql/bin/pg_ctl -D /var/lib/postgresql/data initdb
+        -o "--allow-group-access"
+        -o "--username=tealbase_admin"
+        -o "--locale-provider=icu"
+        -o "--encoding=UTF-8"
+        -o "--icu-locale=en_US.UTF-8"
+      args:
+        executable: /bin/bash
+      environment:
+        LANG: en_US.UTF-8
+        LANGUAGE: en_US.UTF-8
+        LC_ALL: en_US.UTF-8
+        LC_CTYPE: en_US.UTF-8
+        LOCALE_ARCHIVE: /usr/lib/locale/locale-archive
+      vars:
+        ansible_command_timeout: 60
+      when: stage2_nix and (is_psql_oriole or is_psql_17)
 
 - name: copy PG systemd unit
   template:
@@ -233,6 +268,13 @@
     src: files/database-optimizations.service.j2
     dest: /etc/systemd/system/database-optimizations.service
   when: debpkg_mode or stage2_nix
+
+- name: initialize pg required state
+  become: yes
+  shell: |
+    mkdir -p /run/postgresql
+    chown -R postgres:postgres /run/postgresql
+  when: stage2_nix and qemu_mode is defined
 
 - name: Restart Postgres Database without Systemd
   become: yes
@@ -257,13 +299,6 @@
     daemon_reload: yes
   when: debpkg_mode or stage2_nix
 
-- name: Make sure .bashrc exists
-  file: 
-    path: /var/lib/postgresql/.bashrc 
-    state: touch
-    owner: postgres
-    group: postgres
-  when: nixpkg_mode 
 
 - name: Add LOCALE_ARCHIVE to .bashrc
   lineinfile:

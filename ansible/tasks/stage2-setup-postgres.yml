@@ -3,11 +3,72 @@
 #   shell: |
 #     sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install nixpkgs#openjdk11"
 # It was decided to leave pljava disabled at https://github.com/tealbase/postgres/pull/690 therefore removing this task
+
+- name: Check psql_version and modify supautils.conf and postgresql.conf if necessary
+  block:
+    - name: Check if psql_version is psql_orioledb-17
+      set_fact:
+        is_psql_oriole: "{{ psql_version in ['psql_orioledb-17'] }}"
+
+    - name: Check if psql_version is psql_17
+      set_fact:
+        is_psql_17: "{{ psql_version in ['psql_17'] }}"
+
+    - name: Check if psql_version is psql_15
+      set_fact:
+        is_psql_15: "{{ psql_version in ['psql_15'] }}"
+    
+    - name: Remove specified extensions from postgresql.conf if orioledb-17 or 17 build
+      ansible.builtin.command:
+        cmd: >
+          sed -i 's/ timescaledb,//g' 
+          /etc/postgresql/postgresql.conf
+      when: is_psql_oriole or is_psql_17 and stage2_nix 
+      become: yes
+
+    - name: Remove specified extensions from supautils.conf if orioledb-17 or 17 build
+      ansible.builtin.command:
+        cmd: >
+          sed -i 's/ timescaledb,//g; s/ plv8,//g' 
+          /etc/postgresql-custom/supautils.conf
+      when: is_psql_oriole or is_psql_17 and stage2_nix
+      become: yes
+
+    - name: Remove db_user_namespace from postgresql.conf if orioledb-17 or 17 build
+      ansible.builtin.command:
+        cmd: >
+          sed -i 's/db_user_namespace = off/#db_user_namespace = off/g;' 
+          /etc/postgresql/postgresql.conf
+      when: is_psql_oriole or is_psql_17 and stage2_nix
+      become: yes
+
+    - name: Append orioledb to shared_preload_libraries append within closing quote
+      ansible.builtin.command:
+        cmd: >
+          sed -i 's/\(shared_preload_libraries.*\)'\''\(.*\)$/\1, orioledb'\''\2/'
+          /etc/postgresql/postgresql.conf
+      when: is_psql_oriole and stage2_nix
+      become: yes
+
+    - name: Add default_table_access_method setting
+      ansible.builtin.lineinfile:
+        path: /etc/postgresql/postgresql.conf
+        line: "default_table_access_method = 'orioledb'"
+        state: present
+      when: is_psql_oriole and stage2_nix
+      become: yes
+    
+    - name: Add ORIOLEDB_ENABLED environment variable
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        line: 'ORIOLEDB_ENABLED=true'
+      when: is_psql_oriole and stage2_nix
+      become: yes
+
 - name: Install Postgres from nix binary cache
   become: yes
   shell: |
-    sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:tealbase/postgres/{{ git_commit_sha }}#psql_15/bin"
-#TODO (samrose) switch pg_prove sourcing to develop branch once PR is merged
+    sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:tealbase/postgres/{{ git_commit_sha }}#{{psql_version}}/bin"
   when: stage2_nix
 
 - name: Install pg_prove from nix binary cache
@@ -22,6 +83,18 @@
     sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:tealbase/postgres/{{ git_commit_sha }}#tealbase-groonga"
   when: stage2_nix
 
+- name: Install debug symbols for postgres version
+  become: yes
+  shell: |
+    sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:tealbase/postgres/{{ git_commit_sha }}#{{postgresql_version}}_debug"
+  when: stage2_nix
+
+- name: Install source files for postgresql version
+  become: yes
+  shell: |
+    sudo -u postgres bash -c ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh && nix profile install github:tealbase/postgres/{{ git_commit_sha }}#{{postgresql_version}}_src"
+  when: stage2_nix
+  
 - name: Set ownership and permissions for /etc/ssl/private
   become: yes
   file:
@@ -88,18 +161,9 @@
     group: postgres
   when: stage2_nix
 
-# - name: Ensure /usr/lib/postgresql/share/postgresql/pljava directory exists
-#   file:
-#     path: /usr/lib/postgresql/share/postgresql/pljava
-#     state: directory
-#     owner: postgres
-#     group: postgres
-#   when: stage2_nix
-# It was decided to leave pljava disabled at https://github.com/tealbase/postgres/pull/690 therefore removing this task
-
 - name: import pgsodium_getkey script
   template:
-    src: /tmp/ansible-playbook/ansible/files/pgsodium_getkey_readonly.sh.j2
+    src: files/pgsodium_getkey_readonly.sh.j2
     dest: "/usr/lib/postgresql/bin/pgsodium_getkey.sh"
     owner: postgres
     group: postgres
@@ -107,12 +171,11 @@
   when: stage2_nix
 
 - name: Create symbolic links from /var/lib/postgresql/.nix-profile/bin to /usr/lib/postgresql/bin
-  file:
-    src: "{{ item }}"
-    dest: "/usr/lib/postgresql/bin/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/bin/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/bin/ -maxdepth 1 -type f,l -exec sh -c 'ln -s "$0" "{{ item }}/$(basename $0)"' {} \;
+  loop:
+    - /usr/lib/postgresql/bin
+    - /usr/bin
   become: yes
   when: stage2_nix
 
@@ -129,53 +192,21 @@
   when: pg_config_stat.stat.exists and not pg_config_stat.stat.islnk and stage2_nix
   become: yes
 
-- name: Create symbolic links from /var/lib/postgresql/.nix-profile/bin to /usr/bin
-  file:
-    src: "{{ item }}"
-    dest: "/usr/bin/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/bin/*"
-  become: yes
-  when: stage2_nix
-
 - name: Ensure postgres user has ownership of symlink
-  file:
-    path: "/usr/bin/{{ item | basename }}"
-    owner: postgres
-    group: postgres
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/bin/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/bin/ -maxdepth 1 -type f,l -exec chown postgres:postgres "/usr/bin/$(basename {})" \;
   become: yes
   when: stage2_nix
-
-# - name: Create symbolic links from /var/lib/postgresql/.nix-profile/share/pljava to /usr/lib/postgresql/share/postgresql/pljava
-#   file:
-#     src: "{{ item }}"
-#     dest: "/usr/lib/postgresql/share/postgresql/pljava/{{ item | basename }}"
-#     state: link
-#   with_fileglob:
-#     - "/var/lib/postgresql/.nix-profile/share/pljava/*"
-#   become: yes
-# It was decided to leave pljava disabled at https://github.com/tealbase/postgres/pull/690 therefore removing this task
 
 - name: Create symbolic links from /var/lib/postgresql/.nix-profile/share/postgresql to /usr/lib/postgresql/share/postgresql
-  file:
-    src: "{{ item }}"
-    dest: "/usr/lib/postgresql/share/postgresql/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/share/postgresql/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/share/postgresql/ -maxdepth 1 -type f,l -exec sh -c 'ln -s "$0" "/usr/lib/postgresql/share/postgresql/$(basename $0)"' {} \;
   become: yes
   when: stage2_nix
 
 - name: Create symbolic links from /var/lib/postgresql/.nix-profile/share/postgresql/extension to /usr/lib/postgresql/share/postgresql/extension
-  file:
-    src: "{{ item }}"
-    dest: "/usr/lib/postgresql/share/postgresql/extension/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/share/postgresql/extension/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/share/postgresql/extension/ -maxdepth 1 -type f,l -exec sh -c 'ln -s "$0" "/usr/lib/postgresql/share/postgresql/extension/$(basename $0)"' {} \;
   become: yes
   when: stage2_nix
 
@@ -186,31 +217,29 @@
     recurse: yes
   when: stage2_nix
 
-- name: Recursively create symbolic links and set permissions for the contrib/postgis-* dir
-  shell: >
-    sudo mkdir -p /usr/lib/postgresql/share/postgresql/contrib && \
-    sudo find /var/lib/postgresql/.nix-profile/share/postgresql/contrib/ -mindepth 1 -type d -exec sh -c 'for dir do sudo ln -s "$dir" "/usr/lib/postgresql/share/postgresql/contrib/$(basename "$dir")"; done' sh {} + \
-    && chown -R postgres:postgres "/usr/lib/postgresql/share/postgresql/contrib/"
-  become: yes
-  when: stage2_nix
+- name: Check psql_version and run postgis linking if not oriole-xx
+  block:
+    - name: Check if psql_version is psql_orioledb-17
+      set_fact:
+        is_psql_oriole: "{{ psql_version == 'psql_orioledb-17' }}"
+
+    - name: Recursively create symbolic links and set permissions for the contrib/postgis-* dir
+      shell: >
+        sudo mkdir -p /usr/lib/postgresql/share/postgresql/contrib && \
+        sudo find /var/lib/postgresql/.nix-profile/share/postgresql/contrib/ -mindepth 1 -type d -exec sh -c 'for dir do sudo ln -s "$dir" "/usr/lib/postgresql/share/postgresql/contrib/$(basename "$dir")"; done' sh {} + \
+        && chown -R postgres:postgres "/usr/lib/postgresql/share/postgresql/contrib/"
+      become: yes
+      when: stage2_nix and not is_psql_oriole
 
 - name: Create symbolic links from /var/lib/postgresql/.nix-profile/share/postgresql/timezonesets to /usr/lib/postgresql/share/postgresql/timeszonesets
-  file:
-    src: "{{ item }}"
-    dest: "/usr/lib/postgresql/share/postgresql/timezonesets/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/share/postgresql/timezonesets/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/share/postgresql/timezonesets/ -maxdepth 1 -type f,l -exec sh -c 'ln -s "$0" "/usr/lib/postgresql/share/postgresql/timezonesets/$(basename $0)"' {} \;
   become: yes
   when: stage2_nix
 
 - name: Create symbolic links from /var/lib/postgresql/.nix-profile/share/postgresql/tsearch_data to /usr/lib/postgresql/share/postgresql/tsearch_data
-  file:
-    src: "{{ item }}"
-    dest: "/usr/lib/postgresql/share/postgresql/tsearch_data/{{ item | basename }}"
-    state: link
-  with_fileglob:
-    - "/var/lib/postgresql/.nix-profile/share/postgresql/tsearch_data/*"
+  shell: >-
+    find /var/lib/postgresql/.nix-profile/share/postgresql/tsearch_data/ -maxdepth 1 -type f,l -exec sh -c 'ln -s "$0" "/usr/lib/postgresql/share/postgresql/tsearch_data/$(basename $0)"' {} \;
   become: yes
   when: stage2_nix
 
@@ -225,6 +254,14 @@
     state: present
     # script is expected to be placed by finalization tasks for different target platforms
     line: pgsodium.getkey_script= '{{ pg_bindir }}/pgsodium_getkey.sh'
+  when: stage2_nix
+
+- name: Create symbolic link for pgsodium_getkey script
+  file:
+    src: "/usr/lib/postgresql/bin/pgsodium_getkey.sh"
+    dest: "/usr/lib/postgresql/share/postgresql/extension/pgsodium_getkey"
+    state: link
+  become: yes
   when: stage2_nix
 
 - name: Append GRN_PLUGINS_DIR to /etc/environment.d/postgresql.env

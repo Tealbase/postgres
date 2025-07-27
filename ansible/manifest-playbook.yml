@@ -61,6 +61,22 @@
       shell: |
         cd /tmp && tar -cJf admin-mgr-{{ adminmgr_release }}-arm64.tar.xz admin-mgr
 
+    - name: Download tealbase-admin-agent archive
+      get_url:
+        url: "https://tealbase-public-artifacts-bucket.s3.amazonaws.com/tealbase-admin-agent/v{{ tealbase_admin_agent_release }}/tealbase-admin-agent-{{ tealbase_admin_agent_release }}-linux-arm64.tar.gz"
+        dest: "/tmp/tealbase-admin-agent.tar.gz"
+        timeout: 90
+
+    - name: tealbase-admin-agent - unpack archive in /tmp
+      unarchive:
+        remote_src: yes
+        src: /tmp/tealbase-admin-agent.tar.gz
+        dest: /tmp
+
+    - name: tealbase-admin-agent - pack archive
+      shell: |
+        cd /tmp && tar -cJf tealbase-admin-agent-{{ tealbase_admin_agent_release }}-arm64.tar.xz tealbase-admin-agent-{{ tealbase_admin_agent_release }}-linux-arm64
+
     - name: upload archives
       shell: |
         aws s3 cp /tmp/{{ item.file }} s3://{{ internal_artifacts_bucket }}/upgrades/{{ item.service }}/{{ item.file }}
@@ -73,3 +89,5 @@
           file: tealbase-admin-api-{{ adminapi_release }}-arm64.tar.xz
         - service: admin-mgr
           file: admin-mgr-{{ adminmgr_release }}-arm64.tar.xz
+        - service: tealbase-admin-agent
+          file: tealbase-admin-agent-{{ tealbase_admin_agent_release }}-arm64.tar.xz

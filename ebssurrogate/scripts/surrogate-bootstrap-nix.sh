@@ -148,7 +148,7 @@ EOF
 }
 
 function setup_chroot_environment {
-	UBUNTU_VERSION=$(lsb_release -cs) # 'focal' for Ubuntu 20.04
+	UBUNTU_VERSION=$(lsb_release -cs) # 'noble' for Ubuntu 24.04
 
 	# Bootstrap Ubuntu into /mnt
 	debootstrap --arch ${ARCH} --variant=minbase "$UBUNTU_VERSION" /mnt
@@ -179,9 +179,6 @@ function setup_chroot_environment {
 
 	# Copy migrations
 	cp -r /tmp/migrations /mnt/tmp/
-
-	# Copy unit tests 
-	cp -r /tmp/unit-tests /mnt/tmp/
 
 	# Copy the bootstrap script into place and execute inside chroot
 	cp /tmp/chroot-bootstrap-nix.sh /mnt/tmp/chroot-bootstrap-nix.sh
@@ -219,7 +216,10 @@ EOF
 	# Run Ansible playbook
 	#export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_DEBUG=True && export ANSIBLE_REMOTE_TEMP=/mnt/tmp 
 	export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_REMOTE_TEMP=/mnt/tmp
-	ansible-playbook -c chroot -i '/mnt,' /tmp/ansible-playbook/ansible/playbook.yml --extra-vars '{"nixpkg_mode": true, "debpkg_mode": false, "stage2_nix": false}' $ARGS
+	ansible-playbook -c chroot -i '/mnt,' /tmp/ansible-playbook/ansible/playbook.yml \
+	--extra-vars '{"nixpkg_mode": true, "debpkg_mode": false, "stage2_nix": false} ' \
+	--extra-vars "psql_version=psql_${POSTGRES_MAJOR_VERSION}" \
+	$ARGS
 }
 
 function update_systemd_services {

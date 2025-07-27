@@ -1,6 +1,6 @@
 variable "ami" {
   type    = string
-  default = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-arm64-server-*"
+  default = "ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-*"
 }
 
 variable "profile" {
@@ -115,7 +115,7 @@ source "amazon-ebssurrogate" "source" {
   #secret_key   = "${var.aws_secret_key}"
   force_deregister = var.force-deregister
 
-  # Use latest official ubuntu focal ami owned by Canonical.
+  # Use latest official ubuntu noble ami owned by Canonical.
   source_ami_filter {
     filters = {
       virtualization-type = "hvm"
@@ -228,11 +228,6 @@ build {
     destination = "/tmp"
   }
 
-  provisioner "file" {
-    source = "ebssurrogate/files/unit-tests"
-    destination = "/tmp"
-  }
-
   # Copy ansible playbook
   provisioner "shell" {
     inline = ["mkdir /tmp/ansible-playbook"]
@@ -264,7 +259,7 @@ build {
     ]
     use_env_var_file = true
     script = "ebssurrogate/scripts/surrogate-bootstrap-nix.sh"
-    execute_command = "sudo -S sh -c '. {{.EnvVarFile}} && {{.Path}}'"
+    execute_command = "sudo -S sh -c '. {{.EnvVarFile}} && cd /tmp/ansible-playbook && {{.Path}}'"
     start_retry_timeout = "5m"
     skip_clean = true
   }
